@@ -97,9 +97,9 @@ l = html_content.split("CONSOLIDATED SCHEDULE OF INVESTMENTS</span>")
 
 
 tables = []
+cols = []
 df = pd.DataFrame()
-for table_text in l[1:]:
-    
+for i,table_text in enumerate(l[1:]):
 
     values = []
     soup = BeautifulSoup(table_text, 'html.parser')
@@ -109,31 +109,34 @@ for table_text in l[1:]:
     for row in table.find_all('tr'):
         columns = row.find_all('td')
         row_data = {}
-        for col in columns:
+        for j, col in enumerate(columns):
             cell_text = col.get_text(strip=True)
             if cell_text == "":
                 continue
-            column_index = len(row_data) + 1
-            row_data[f'col{column_index}'] = cell_text
-        values.append(row_data)
-
-    # for row in table.find_all('tr'):
-    #     columns = row.find_all('td')
-    #     for col in columns:
-    #         cell_text = col.get_text(strip=True)
-    #             # print("Gotcha")
-    #         if cell_text == "":
-    #             continue
-    #         values.append(cell_text + " ")
-
-    # with open("flkj.html", "w") as f:
-    #     f.write(str(table))
+            # column_index = len(row_data) + 1
+            row_data[f'col{j}'] = cell_text
+        values.append(row_data)\
+        
     df_to_append = pd.DataFrame(values)
+    if i == 0:
+        cols = [str(value).strip() for value in df_to_append.iloc[1]]
+
+    df_to_append = df_to_append[2:]
     df = pd.concat([df, df_to_append], ignore_index=True)
 
-df.to_csv("Newtest.csv")
+df.to_csv("testfile.csv",index=False)
+print(cols)
 
-    
+df.columns = cols
+col_mapping = {"Company (1)": "Company Name", "Investment": "Security", "Par / Units": "Principal", "Amortized Cost(3)(4)": "Amortized Cost"}
+df = df.rename(columns = col_mapping)
+
+    # Specific to Blue Owl Capital
+    # df['Reference Rate'] = df['Interest'].apply(lambda x: x.split(' ')[0])
+    # df['Spread'] = df['Interest'].apply(lambda x: x.split(' ')[1])
+    # del df['Interest']
+
+df.to_csv("testfile.csv", index=False)
 
     #         column_index = len(row_data) + 1
     #         row_data[f'col{column_index}'] = cell_text
