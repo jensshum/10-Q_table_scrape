@@ -1,0 +1,22 @@
+0     d521879d10q.htm
+1     d446365d10q.htm
+2     d290948d10q.htm
+3     d359557d10q.htm
+4     d279365d10q.htm
+5     d209044d10q.htm
+6     d180933d10q.htm
+7      d29702d10q.htm
+8     d629099d10q.htm
+9      d43904d10q.htm
+10    d907516d10q.htm
+11    d828273d10q.htm
+12    d782068d10q.htm
+13    d748052d10q.htm
+14    d613037d10q.htm
+15    d532940d10q.htm
+16    d540853d10q.htm
+17    d475843d10q.htm
+18    d438706d10q.htm
+19    d381894d10q.htm
+20    d291057d10q.htm
+Name: primaryDocument, dtype: object
