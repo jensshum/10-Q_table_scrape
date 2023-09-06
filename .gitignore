@@ -1,3 +1,6 @@
 /vevn
 /.ipynb*
+/CIK*
+*.html
+*.csv
 

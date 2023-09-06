@@ -11,8 +11,10 @@ import requests
 import pandas as pd
 import sys
 from bs4 import BeautifulSoup
-from ixbrlparse import IXBRL
+import os
+import openai
 
+LLM = 'gpt-4'
 # create request header
 headers = {'User-Agent': "email@address.com"}
 
@@ -82,32 +84,38 @@ for cik in cik_tickers:
     accession_numbers = forms.loc[forms["form"] == "10-Q", "accessionNumber"].tolist()
     html_caps = forms.loc[forms["form"] == "10-Q", "primaryDocument"].tolist()
 
-    # with open("html.txt", "w") as f:
-    #     f.write(str(html))
-
+    k = 1
     for html, num in zip(html_caps, accession_numbers):
+        
         num = num.replace("-","")
         url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{num}/{html}"
+        print(url)
 
         response = requests.get(url, headers=headers)
         html_content = response.text
 
-        # print(html_content)
-
-        ## WORKING FOR AB Private Investor Corp
+        ## WORKING FOR AB Private Investor Corp -- 1634452 cik
+        # if "1634452" in cik:
+        corrected_cols = ["Company Name","Industry","Security","Reference Rate","Spread","Interest Rate","Maturity Date","Fair", "Value", "Principal","Amortized Cost","Investment Date"]
         investment_tables = html_content.lower().split("schedule of investments")
-
-        if len(investment_tables) != 1:
+        if len(investment_tables) == 1:
+            print("No schedule info")
             continue
-            
+
+        print(f"10-Q file num {k} of", len(accession_numbers), f"for {cik}")
+
         tables = []
         cols = []
         df = pd.DataFrame()
-        for i,table_text in enumerate(investment_tables[1:]):
-
+        for i, table_text in enumerate(investment_tables[1:]):
+            if k > 5:
+                continue
             values = []
             soup = BeautifulSoup(table_text, 'html.parser')
             table = soup.find('table')
+            if table == None:
+                continue
+
             row_num = 0
 
             for row in table.find_all('tr'):
@@ -119,34 +127,45 @@ for cik in cik_tickers:
                 values.append(row_data)
                 
             df_to_append = pd.DataFrame(values)
+            # print(df_to_append.columns)
             if i == 0:
                 cols = [str(value).strip() for value in df_to_append.iloc[1]]
+                print(cols)
 
-            df_to_append = df_to_append[2:]
+            # df_to_append = df_to_append[2:]
+            if len(df_to_append.columns) > 21:
+                continue
             df = pd.concat([df, df_to_append], ignore_index=True)
 
+            ## For ARCC
+            # cols_to_fill = ["0","2"]
+            # for col in cols_to_fill:
+            #     col0_data = df[f"col{col}"]
+            #     col_data = col0_data[0]
+            #     temp_data = col_data
+            #     for index, data in enumerate(col0_data):
+            #         if str(col_data) != "nan":
+            #             temp_data = col_data
+            #         col_data = data
+            #         if str(data) == "nan":
+            #             df.at[index, f"col{col}"] = temp_data
 
+            # try:
+            # col_mapping = {"Company (1)": "Company Name", "Investment": "Security", "Par / Units": "Principal", "Amortized Cost(3)(4)": "Amortized Cost"}
+            #     df = df.rename(columns = col_mapping)
+            # except Exception:
 
-    # cols_to_fill = ["0","2"]
-    # for col in cols_to_fill:
-    #     col0_data = df[f"col{col}"]
-    #     col_data = col0_data[0]
-    #     temp_data = col_data
-    #     for index, data in enumerate(col0_data):
-    #         if str(col_data) != "nan":
-    #             temp_data = col_data
-    #         col_data = data
-    #         if str(data) == "nan":
-    #             df.at[index, f"col{col}"] = temp_data
+        df.columns = corrected_cols
+        df = df[6:]
 
         try:
-            df.columns = cols
-            col_mapping = {"Company (1)": "Company Name", "Investment": "Security", "Par / Units": "Principal", "Amortized Cost(3)(4)": "Amortized Cost"}
-            df = df.rename(columns = col_mapping)
+            os.mkdir(f"CIK_{cik}")
         except Exception:
-            df.to_csv("testfile.csv", index=False)
-            break
-
+            pass
+        df.to_csv(f"CIK_{cik}/CIK_{cik}_filenum_{k}_of_{len(accession_numbers)}_test.csv", index=False)
+        k += 1
+        break
+    sys.exit()
 
     # Specific to Blue Owl Capital
     # df['Reference Rate'] = df['Interest'].apply(lambda x: x.split(' ')[0])
