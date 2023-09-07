@@ -62,13 +62,6 @@ for cik in cik_tickers:
         headers=headers
         )
 
-    # review json 
-    # print(filingMetadata.json().keys())
-    # filingMetadata.json()['filings']
-    # filingMetadata.json()['filings'].keys()
-    # filingMetadata.json()['filings']['recent']
-    # filingMetadata.json()['filings']['recent'].keys()
-
     # dictionary to dataframe
     allForms = pd.DataFrame.from_dict(
                 filingMetadata.json()['filings']['recent'])
@@ -96,20 +89,16 @@ for cik in cik_tickers:
 
         ## WORKING FOR AB Private Investor Corp -- 1634452 cik
         # if "1634452" in cik:
-        corrected_cols = ["Company Name","Industry","Security","Reference Rate","Spread","Interest Rate","Maturity Date","Fair", "Value", "Principal","Amortized Cost","Investment Date"]
         investment_tables = html_content.lower().split("schedule of investments")
         if len(investment_tables) == 1:
             print("No schedule info")
             continue
 
-        print(f"10-Q file num {k} of", len(accession_numbers), f"for {cik}")
+        # print(f"10-Q file num {k} of", len(accession_numbers), f"for {cik}")
 
         tables = []
-        cols = []
         df = pd.DataFrame()
         for i, table_text in enumerate(investment_tables[1:]):
-            if k > 5:
-                continue
             values = []
             soup = BeautifulSoup(table_text, 'html.parser')
             table = soup.find('table')
@@ -123,16 +112,17 @@ for cik in cik_tickers:
                 row_data = {}
                 for j, col in enumerate(columns):
                     cell_text = col.get_text(strip=True)
+                    if "?" in cell_text: 
+                        continue
                     row_data[f'col{j}'] = cell_text
                 values.append(row_data)
                 
             df_to_append = pd.DataFrame(values)
-            # print(df_to_append.columns)
-            if i == 0:
-                cols = [str(value).strip() for value in df_to_append.iloc[1]]
-                print(cols)
+            # if i == 2:
+            #     cols = [str(value).strip() for value in df_to_append.iloc[1]]
+            #     print(cols)
 
-            # df_to_append = df_to_append[2:]
+            df_to_append = df_to_append[2:]
             if len(df_to_append.columns) > 21:
                 continue
             df = pd.concat([df, df_to_append], ignore_index=True)
@@ -155,20 +145,41 @@ for cik in cik_tickers:
             #     df = df.rename(columns = col_mapping)
             # except Exception:
 
-        df.columns = corrected_cols
-        df = df[6:]
+        # df.columns = cols
+        corrected_cols = ["Company Name","Industry","Security","Reference Rate","Spread","Interest Rate","Maturity Date","Fair", "Value", "Principal","Amortized Cost","Investment Date"]
 
+        col_mapping = {"col0": "Company Name", "col2" : "Industry", "col4": "Security", "col6": "Interest", "col8": "Maturity Date", "col11": "Principal", "col15": "Amortized Cost", "col19": "Fair Value" }
+        
+        df = df[6:]
+        df = df.drop(["col1","col3","col5","col7","col9","col10","col12","col13","col14","col16","col17","col18","col20"],axis=1)
+        
+        df = df.rename(columns=col_mapping)
+
+        df["Reference Rate"] = df['Interest'].apply(lambda x: str(x).replace("—","").split(' ')[0])
+        # df["Spread"] = df["Interest"].apply(lambda x: " ".join(str(x).split(" ")[1:]) if 3 > len(str(x).split(' ')) > 6 else "nan")
+        df["Spread"] = df["Interest"].apply(lambda x: " ".join(str(x).replace("—","").replace("(","").split(" ")[1:4]) if 2 < len(str(x).split(" ")) <= 6 else " ".join(str(x).split(" ")[1:6]))
+        df["Interest Rate"] = df["Interest"].apply(lambda x: " ".join(str(x).replace("—","").replace("(","").split(" ")[4:]) if 2 < len(str(x).split(" ")) <= 6 else " ".join(str(x).split(" ")[6:]))
+        # df[""]
+        df = df.drop("Interest", axis=1)
+        # df = df.drop(df.loc("").
+        df = df[df.iloc[:, 0] != '']
+
+        order_of_columns = ["Company Name","Industry","Security","Reference Rate","Spread","Interest Rate","Maturity Date","Fair Value","Principal","Amortized Cost"]
+        # print(len(df['']))
+
+        df = df[order_of_columns]
         try:
             os.mkdir(f"CIK_{cik}")
         except Exception:
             pass
         df.to_csv(f"CIK_{cik}/CIK_{cik}_filenum_{k}_of_{len(accession_numbers)}_test.csv", index=False)
         k += 1
-        break
+        # break
     sys.exit()
 
     # Specific to Blue Owl Capital
     # df['Reference Rate'] = df['Interest'].apply(lambda x: x.split(' ')[0])
+    # df['Spread'] = df['Interest'].apply(lambda x: x.split(' ')[1])
     # df['Spread'] = df['Interest'].apply(lambda x: x.split(' ')[1])
     # del df['Interest']
 
