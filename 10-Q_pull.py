@@ -13,6 +13,7 @@ import sys
 from bs4 import BeautifulSoup
 import os
 import openai
+import time
 
 from format_AB_private_investor import format_AB_private_investor
 from format_arcc import format_arcc
@@ -108,7 +109,9 @@ html_links = []
 for cik in cik_tickers:
     
     accession_numbers, html_caps = get_accession_nums_and_html(cik)
-
+    # For testing:
+    if "1287750" not in cik:
+        continue
     k = 1
     for html, num in zip(html_caps, accession_numbers):
         
@@ -142,7 +145,7 @@ for cik in cik_tickers:
             df_to_append = pd.DataFrame(values)
             df_to_append = df_to_append[2:]
             if "1287750" in cik:
-                print(len(df_to_append.columns))
+                # print(len(df_to_append.columns))
                 if len(df_to_append.columns) < 20:
                     continue
             elif "1634452" in cik:
@@ -152,14 +155,14 @@ for cik in cik_tickers:
             df = pd.concat([df, df_to_append], ignore_index=True)
 
         print(cik)
-        if "1287750" not in cik:
-            break
+        
         if "1634452" in cik:
             break
             df = format_AB_private_investor(df)
         elif "1287750" in cik:
+            
             df = format_arcc(df)
-
+            
             try:
                 os.mkdir(f"CIK_{cik}")
             except Exception:
