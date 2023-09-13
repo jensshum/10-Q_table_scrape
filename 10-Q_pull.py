@@ -12,8 +12,8 @@ import pandas as pd
 import sys
 from bs4 import BeautifulSoup
 import os
-import openai
 import time
+import re
 
 from format_AB_private_investor import format_AB_private_investor
 from format_arcc import format_arcc
@@ -66,6 +66,15 @@ def get_html(url):
 
 
 
+
+# List of CIK specific variables
+first_table_offset = 2
+
+
+
+# End of list of CIK specific variables
+
+
 # MAIN --------------------------------------------------------------
 
 
@@ -110,7 +119,7 @@ for cik in cik_tickers:
     
     accession_numbers, html_caps = get_accession_nums_and_html(cik)
     # For testing:
-    if "1287750" not in cik:
+    if "1326003" not in cik:
         continue
     k = 1
     for html, num in zip(html_caps, accession_numbers):
@@ -121,10 +130,11 @@ for cik in cik_tickers:
         html_content = get_html(url)
 
         # Checks html_content for the correct tables.
-        investment_tables = html_content.lower().split("schedule of investments")
+        investment_tables = re.split('schedule[s]? of investment[s]?', html_content.lower())
         if len(investment_tables) < 2:
             print("No schedule info")
             continue
+        # print(investment_tables)
         
         tables = []
         df = pd.DataFrame()
@@ -152,25 +162,31 @@ for cik in cik_tickers:
                 if len(df_to_append.columns) > 24:
                     continue
 
-            df = pd.concat([df, df_to_append], ignore_index=True)
+            
+            if 17 < len(df_to_append.columns):
+                print(len(df_to_append.columns))
+                df = pd.concat([df, df_to_append], ignore_index=True)
 
         print(cik)
         
         if "1634452" in cik:
             break
             df = format_AB_private_investor(df)
-        elif "1287750" in cik:
+        # elif "1287750" in cik:
             
-            df = format_arcc(df)
+        #     df = format_arcc(df)
             
-            try:
-                os.mkdir(f"CIK_{cik}")
-            except Exception:
-                pass
-            df.to_csv(f"CIK_{cik}/CIK_{cik}_filenum_{k}_of_{len(accession_numbers)}_test.csv", index=False)
-            k += 1
-            sys.exit()
+        #     try:
+        #         os.mkdir(f"CIK_{cik}")
+        #     except Exception:
+        #         pass
+        #     df.to_csv(f"CIK_{cik}/CIK_{cik}_filenum_{k}_of_{len(accession_numbers)}_test.csv", index=False)
+        #     k += 1
+        #     sys.exit()
+        elif "1326003" in cik:
+            df.to_csv("Test_1326003.csv")
         break
+        
 
     # Specific to Blue Owl Capital
     # df['Reference Rate'] = df['Interest'].apply(lambda x: x.split(' ')[0])
